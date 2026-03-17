@@ -29,7 +29,7 @@ function compressImage(file, maxDim = 800, quality = 0.7) {
   })
 }
 
-export default function RecipeForm({ recipe, onSave, onCancel }) {
+export default function RecipeForm({ recipe, onSave, onCancel, saving }) {
   const [name, setName] = useState(recipe?.name || '')
   const [description, setDescription] = useState(recipe?.description || '')
   const [photos, setPhotos] = useState(recipe?.photos || [])
@@ -117,9 +117,10 @@ export default function RecipeForm({ recipe, onSave, onCancel }) {
       <div className="flex gap-3 pt-2">
         <button
           type="submit"
-          className="bg-ci-500 text-white px-6 py-2 rounded-lg hover:bg-ci-600 transition-colors font-medium"
+          disabled={saving}
+          className="bg-ci-500 text-white px-6 py-2 rounded-lg hover:bg-ci-600 transition-colors font-medium disabled:opacity-50"
         >
-          {recipe ? 'Speichern' : 'Hinzufügen'}
+          {saving ? 'Wird gespeichert...' : recipe ? 'Speichern' : 'Hinzufügen'}
         </button>
         <button
           type="button"

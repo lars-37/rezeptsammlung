@@ -1,37 +1,74 @@
 import { useState } from 'react'
-import { useLocalStorage } from './hooks/useLocalStorage'
+import { useAuth } from './hooks/useAuth'
+import { useRecipes } from './hooks/useRecipes'
 import RecipeList from './components/RecipeList'
 import RecipeForm from './components/RecipeForm'
 import RecipeDetail from './components/RecipeDetail'
 import ImportDialog from './components/ImportDialog'
+import Auth from './components/Auth'
 
 export default function App() {
-  const [recipes, setRecipes] = useLocalStorage('recipes', [])
+  const { user, loading: authLoading, signIn, signUp, signOut } = useAuth()
+  const { recipes, loading: recipesLoading, addRecipe, updateRecipe, deleteRecipe } = useRecipes(user)
   const [view, setView] = useState('list')
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [showImport, setShowImport] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  function addRecipe(data) {
-    const recipe = { ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
-    setRecipes([recipe, ...recipes])
-    setView('list')
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-500">Laden...</p>
+      </div>
+    )
   }
 
-  function handleImported(data) {
-    addRecipe(data)
-    setShowImport(false)
+  if (!user) {
+    return <Auth signIn={signIn} signUp={signUp} />
   }
 
-  function updateRecipe(data) {
-    setRecipes(recipes.map((r) => (r.id === selectedRecipe.id ? { ...selectedRecipe, ...data } : r)))
-    setView('list')
-    setSelectedRecipe(null)
+  async function handleAdd(data) {
+    setSaving(true)
+    try {
+      await addRecipe(data)
+      setView('list')
+    } catch (err) {
+      alert('Fehler beim Speichern: ' + err.message)
+    }
+    setSaving(false)
   }
 
-  function deleteRecipe(id) {
-    setRecipes(recipes.filter((r) => r.id !== id))
-    setView('list')
-    setSelectedRecipe(null)
+  async function handleImported(data) {
+    setSaving(true)
+    try {
+      await addRecipe(data)
+      setShowImport(false)
+    } catch (err) {
+      alert('Fehler beim Import: ' + err.message)
+    }
+    setSaving(false)
+  }
+
+  async function handleUpdate(data) {
+    setSaving(true)
+    try {
+      await updateRecipe(selectedRecipe.id, data)
+      setView('list')
+      setSelectedRecipe(null)
+    } catch (err) {
+      alert('Fehler beim Aktualisieren: ' + err.message)
+    }
+    setSaving(false)
+  }
+
+  async function handleDelete(id) {
+    try {
+      await deleteRecipe(id)
+      setView('list')
+      setSelectedRecipe(null)
+    } catch (err) {
+      alert('Fehler beim Löschen: ' + err.message)
+    }
   }
 
   function openDetail(id) {
@@ -54,38 +91,60 @@ export default function App() {
           >
             Rezeptsammlung
           </h1>
-          {view === 'list' && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowImport(true)}
-                className="bg-ci-hellblau text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity font-medium"
-              >
-                🔗 URL Import
-              </button>
-              <button
-                onClick={() => setView('add')}
-                className="bg-ci-500 text-white px-4 py-2 rounded-lg hover:bg-ci-600 transition-colors font-medium"
-              >
-                + Neues Rezept
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {view === 'list' && (
+              <>
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="bg-ci-hellblau text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity font-medium"
+                >
+                  🔗 URL Import
+                </button>
+                <button
+                  onClick={() => setView('add')}
+                  className="bg-ci-500 text-white px-4 py-2 rounded-lg hover:bg-ci-600 transition-colors font-medium"
+                >
+                  + Neues Rezept
+                </button>
+              </>
+            )}
+            <button
+              onClick={signOut}
+              className="text-gray-400 hover:text-gray-600 text-sm ml-2"
+              title="Abmelden"
+            >
+              Abmelden
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {view === 'list' && <RecipeList recipes={recipes} onSelect={openDetail} />}
-        {view === 'add' && <RecipeForm onSave={addRecipe} onCancel={() => setView('list')} />}
-        {view === 'edit' && (
-          <RecipeForm recipe={selectedRecipe} onSave={updateRecipe} onCancel={() => setView('list')} />
-        )}
-        {view === 'detail' && selectedRecipe && (
-          <RecipeDetail
-            recipe={selectedRecipe}
-            onEdit={openEdit}
-            onDelete={deleteRecipe}
-            onBack={() => { setView('list'); setSelectedRecipe(null) }}
-          />
+        {recipesLoading ? (
+          <p className="text-center text-gray-500">Rezepte werden geladen...</p>
+        ) : (
+          <>
+            {view === 'list' && <RecipeList recipes={recipes} onSelect={openDetail} />}
+            {view === 'add' && (
+              <RecipeForm onSave={handleAdd} onCancel={() => setView('list')} saving={saving} />
+            )}
+            {view === 'edit' && (
+              <RecipeForm
+                recipe={selectedRecipe}
+                onSave={handleUpdate}
+                onCancel={() => setView('list')}
+                saving={saving}
+              />
+            )}
+            {view === 'detail' && selectedRecipe && (
+              <RecipeDetail
+                recipe={selectedRecipe}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+                onBack={() => { setView('list'); setSelectedRecipe(null) }}
+              />
+            )}
+          </>
         )}
       </main>
 
