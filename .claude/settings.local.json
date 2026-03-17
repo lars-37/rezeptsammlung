@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find '/Users/lars/Library/Mobile Documents/com~apple~CloudDocs/wissen/ki/ki_masterclass/claude/claude_code/projekt_1' -type f -not -path */.*)",
+      "Bash(find '/Users/lars/Library/Mobile Documents/com~apple~CloudDocs/wissen/ki/ki_masterclass/claude/claude_code/projekt_1' -type f -path */.*)",
+      "Bash(npm --version)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//Users/lars/.nvm/versions/**)",
+      "Bash(brew install:*)",
+      "Bash(npm create:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git --version)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

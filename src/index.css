@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  /* CI Lars Bösel – Primärfarbe Blau */
+  --color-ci-50: #EEF2F6;
+  --color-ci-100: #D8E0EA;
+  --color-ci-200: #B8C8D8;
+  --color-ci-300: #8CA0B8;
+  --color-ci-400: #6B8AAD;
+  --color-ci-500: #5A7A9E;
+  --color-ci-600: #4A6580;
+  --color-ci-700: #3D5268;
+  --color-ci-800: #334455;
+  --color-ci-900: #1E2A36;
+
+  /* CI Akzentfarben */
+  --color-ci-rot: #FF0000;
+  --color-ci-gruen: #00A651;
+  --color-ci-lila: #6B2FA0;
+  --color-ci-gelb: #FFF200;
+  --color-ci-hellblau: #00AEEF;
+  --color-ci-pink: #EC008C;
+}
