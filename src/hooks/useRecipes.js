@@ -1,20 +1,49 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+
+const API_URL = 'https://ozeb3wntxp4yhbrsfv4a5ush.31.70.112.211.sslip.io'
+
+function normalizeRecipe(recipe) {
+  return {
+    ...recipe,
+    photos: recipe.photos || (recipe.photo ? [recipe.photo] : []),
+    source: recipe.source || recipe.source_url || '',
+    rating: recipe.rating || 0,
+  }
+}
 
 export function useRecipes(user) {
   const [recipes, setRecipes] = useState([])
   const [loading, setLoading] = useState(true)
 
   const fetchRecipes = useCallback(async () => {
-    if (!user) return
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('*')
-      .order('created_at', { ascending: false })
+    if (!user) {
+      setRecipes([])
+      setLoading(false)
+      return
+    }
 
-    if (!error) setRecipes(data || [])
-    setLoading(false)
+    setLoading(true)
+
+    try {
+      const response = await fetch(`${API_URL}/api/recipes`)
+
+      if (!response.ok) {
+        throw new Error(`API-Fehler ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      setRecipes(
+        Array.isArray(data)
+          ? data.map(normalizeRecipe)
+          : []
+      )
+    } catch (error) {
+      console.error('Fehler beim Laden der Rezepte:', error)
+      setRecipes([])
+    } finally {
+      setLoading(false)
+    }
   }, [user])
 
   useEffect(() => {
@@ -22,89 +51,79 @@ export function useRecipes(user) {
   }, [fetchRecipes])
 
   async function addRecipe(recipeData) {
-    const photos = await uploadPhotos(recipeData.photos || [])
-    const { data, error } = await supabase
-      .from('recipes')
-      .insert({
+    const response = await fetch(`${API_URL}/api/recipes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         name: recipeData.name,
-        description: recipeData.description,
         date: recipeData.date,
-        rating: recipeData.rating,
-        photos,
-        source: recipeData.source || null,
-        user_id: user.id,
-      })
-      .select()
-      .single()
+        description: recipeData.description || '',
+        photo: recipeData.photos?.[0] || '',
+        source_url: recipeData.source || '',
+      }),
+    })
 
-    if (error) throw error
+    if (!response.ok) {
+      throw new Error(`API-Fehler ${response.status}`)
+    }
+
+    const data = normalizeRecipe(await response.json())
+
     setRecipes((prev) => [data, ...prev])
+
     return data
   }
 
   async function updateRecipe(id, recipeData) {
-    const photos = await uploadPhotos(recipeData.photos || [])
-    const { data, error } = await supabase
-      .from('recipes')
-      .update({
+    const response = await fetch(`${API_URL}/api/recipes/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         name: recipeData.name,
-        description: recipeData.description,
         date: recipeData.date,
-        rating: recipeData.rating,
-        photos,
-        source: recipeData.source || null,
-      })
-      .eq('id', id)
-      .select()
-      .single()
+        description: recipeData.description || '',
+        photo: recipeData.photos?.[0] || '',
+        source_url: recipeData.source || '',
+      }),
+    })
 
-    if (error) throw error
-    setRecipes((prev) => prev.map((r) => (r.id === id ? data : r)))
+    if (!response.ok) {
+      throw new Error(`API-Fehler ${response.status}`)
+    }
+
+    const data = normalizeRecipe(await response.json())
+
+    setRecipes((prev) =>
+      prev.map((recipe) => (recipe.id === id ? data : recipe))
+    )
+
     return data
   }
 
   async function deleteRecipe(id) {
-    const recipe = recipes.find((r) => r.id === id)
-    // Fotos aus Storage löschen
-    if (recipe?.photos?.length) {
-      const paths = recipe.photos
-        .filter((url) => url.includes('supabase'))
-        .map((url) => {
-          const match = url.match(/recipe-photos\/(.+)$/)
-          return match ? match[1] : null
-        })
-        .filter(Boolean)
-      if (paths.length) await supabase.storage.from('recipe-photos').remove(paths)
+    const response = await fetch(`${API_URL}/api/recipes/${id}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      throw new Error(`API-Fehler ${response.status}`)
     }
 
-    const { error } = await supabase.from('recipes').delete().eq('id', id)
-    if (error) throw error
-    setRecipes((prev) => prev.filter((r) => r.id !== id))
+    setRecipes((prev) => prev.filter((recipe) => recipe.id !== id))
   }
 
-  return { recipes, loading, addRecipe, updateRecipe, deleteRecipe, refetch: fetchRecipes }
-}
-
-// Fotos hochladen: Base64 → Supabase Storage, URLs bleiben URLs
-async function uploadPhotos(photos) {
-  const uploaded = []
-  for (const photo of photos) {
-    if (photo.startsWith('data:')) {
-      // Base64 → in Storage hochladen
-      const blob = await fetch(photo).then((r) => r.blob())
-      const ext = blob.type.includes('png') ? 'png' : 'jpg'
-      const path = `${crypto.randomUUID()}.${ext}`
-      const { error } = await supabase.storage.from('recipe-photos').upload(path, blob, {
-        contentType: blob.type,
-      })
-      if (!error) {
-        const { data } = supabase.storage.from('recipe-photos').getPublicUrl(path)
-        uploaded.push(data.publicUrl)
-      }
-    } else {
-      // Bereits eine URL (z.B. von Import) — behalten
-      uploaded.push(photo)
-    }
+  return {
+    recipes,
+    loading,
+    addRecipe,
+    updateRecipe,
+    deleteRecipe,
+    refetch: fetchRecipes,
   }
-  return uploaded
 }
+cat src/hooks/useRecipes.js
+
