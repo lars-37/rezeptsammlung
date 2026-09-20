@@ -125,5 +125,3 @@ export function useRecipes(user) {
     refetch: fetchRecipes,
   }
 }
-cat src/hooks/useRecipes.js
-
