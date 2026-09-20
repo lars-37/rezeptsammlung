@@ -38,8 +38,30 @@ export default function RecipeForm({ recipe, onSave, onCancel, saving }) {
 
   async function handlePhotos(e) {
     const files = Array.from(e.target.files || [])
-    const compressed = await Promise.all(files.map((f) => compressImage(f)))
-    setPhotos((prev) => [...prev, ...compressed])
+
+    for (const file of files) {
+      const compressed = await compressImage(file)
+      const blob = await fetch(compressed).then((r) => r.blob())
+
+      const formData = new FormData()
+      formData.append('file', blob, 'photo.jpg')
+
+      const response = await fetch(
+        'https://ozeb3wntxp4yhbrsfv4a5ush.31.70.112.211.sslip.io/api/upload',
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error(`Foto-Upload fehlgeschlagen: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setPhotos((prev) => [...prev, data.url])
+    }
+
     e.target.value = ''
   }
 

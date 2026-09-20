@@ -60,8 +60,9 @@ export function useRecipes(user) {
         name: recipeData.name,
         date: recipeData.date,
         description: recipeData.description || '',
-        photo: recipeData.photos?.[0] || '',
-        source_url: recipeData.source || '',
+        photos: recipeData.photos || [],
+        source: recipeData.source || null,
+        rating: recipeData.rating || 0,
       }),
     })
 
@@ -86,8 +87,9 @@ export function useRecipes(user) {
         name: recipeData.name,
         date: recipeData.date,
         description: recipeData.description || '',
-        photo: recipeData.photos?.[0] || '',
-        source_url: recipeData.source || '',
+        photos: recipeData.photos || [],
+        source: recipeData.source || null,
+        rating: recipeData.rating || 0,
       }),
     })
 
