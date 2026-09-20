@@ -1,34 +1,29 @@
-// Mehrere CORS-Proxies als Fallback — wenn einer nicht geht, wird der nächste versucht
-const CORS_PROXIES = [
-  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-]
-
-async function fetchWithFallback(url) {
-  const errors = []
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const proxyUrl = proxy(url)
-      const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const html = await response.text()
-      if (html && html.length > 200) return html
-      throw new Error('Leere Antwort')
-    } catch (err) {
-      errors.push(err.message)
-    }
-  }
-  throw new Error(`Seite konnte nicht geladen werden. Versuche es mit einer anderen URL.\n(${errors.join(', ')})`)
-}
+const API_URL = 'https://ozeb3wntxp4yhbrsfv4a5ush.31.70.112.211.sslip.io'
 
 export async function importFromUrl(url) {
-  const html = await fetchWithFallback(url)
+  const response = await fetch(`${API_URL}/api/import-url`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url }),
+  })
 
-  const recipe = extractJsonLd(html)
-  if (recipe) return normalizeRecipe(recipe, url)
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Import fehlgeschlagen: HTTP ${response.status} ${text}`)
+  }
 
-  return extractFromMeta(html, url)
+  const data = await response.json()
+
+  return {
+    name: data.name || 'Importiertes Rezept',
+    description: data.description || '',
+    photos: data.photo ? [data.photo] : [],
+    date: new Date().toISOString().split('T')[0],
+    rating: 0,
+    source: data.source_url || url,
+  }
 }
 
 function extractJsonLd(html) {
